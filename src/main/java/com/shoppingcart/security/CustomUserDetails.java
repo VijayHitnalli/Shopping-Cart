@@ -1,22 +1,32 @@
 package com.shoppingcart.security;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.shoppingcart.entity.User;
+import com.shoppingcart.enums.UserRole;
 
 import lombok.AllArgsConstructor;
-@AllArgsConstructor
+
 public class CustomUserDetails implements UserDetails{
 	
 	private User user;
+	
+	
+	public CustomUserDetails(User user) {
+		super();
+		this.user = user;
+	}
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		// TODO Auto-generated method stub
-		return null;
+		return Collections.singleton(new SimpleGrantedAuthority(user.getUserRole().name()));
 	}
 
 	@Override
@@ -54,5 +64,7 @@ public class CustomUserDetails implements UserDetails{
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	
 
 }

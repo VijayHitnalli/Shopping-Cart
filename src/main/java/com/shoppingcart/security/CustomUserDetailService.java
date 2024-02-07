@@ -13,7 +13,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 @Service
 public class CustomUserDetailService implements UserDetailsService{
-
+	
 	private UserRepository userRepository;
 	
 	@Override
