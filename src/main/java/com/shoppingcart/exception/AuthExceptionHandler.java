@@ -42,4 +42,8 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	public ResponseEntity<Object> handleUserNotFoundById(UserNotFoundException exception){
 		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "User Not found with given Id");
 	}
+	@ExceptionHandler(UserAlreadyExistByEmailException.class)
+	public ResponseEntity<Object> handleUserAlreadyExistByEmail(UserAlreadyExistByEmailException exception){
+		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "User eith given Email Id is Alreday Exist");
+	}
 }
