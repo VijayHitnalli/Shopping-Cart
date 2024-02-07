@@ -14,7 +14,6 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class SecurityConfig {
 	
-	
 	private  CustomUserDetailService userDetailService;
 
 	@Bean
@@ -28,8 +27,7 @@ public class SecurityConfig {
 				.permitAll()
 				.anyRequest().authenticated())
 				.formLogin(Customizer.withDefaults())
-				.build();
-				
+				.build();		
 	}
 	
 	@Bean
