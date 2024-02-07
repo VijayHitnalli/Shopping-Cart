@@ -18,7 +18,7 @@ private int userId;
 private String userName;
 private String email;
 private UserRole userRole;
-private boolean isEmailVerified;
+private boolean isEmailValidated;
 private boolean isDeleted;
 
 
