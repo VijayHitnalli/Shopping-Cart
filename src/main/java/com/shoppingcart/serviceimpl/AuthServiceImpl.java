@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import com.shoppingcart.entity.Customer;
 import com.shoppingcart.entity.Seller;
 import com.shoppingcart.entity.User;
+import com.shoppingcart.exception.UserAlreadyExistByEmailException;
+import com.shoppingcart.exception.UserNotFoundException;
 import com.shoppingcart.repository.CustomerRepository;
 import com.shoppingcart.repository.SellerRepository;
 import com.shoppingcart.repository.UserRepository;
@@ -25,7 +27,6 @@ import lombok.NoArgsConstructor;
 
 
 @AllArgsConstructor
-@NoArgsConstructor
 @Service
 public class AuthServiceImpl implements AuthService{
 	
@@ -87,19 +88,22 @@ public class AuthServiceImpl implements AuthService{
 	
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userRequest) {
-	User user=userRepository.findByUserName(userRequest.getEmail().split("@")[0]).map(u->{
-		if(u.isEmailValidated()) {
-			throw new RuntimeException("User Already exist eith the specified Id");
-		}
-		else {
-			//Send an email otp 
-		}
-		return u;
-	}).orElse(saveUser(userRequest));
-	return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure.setStatus(HttpStatus.ACCEPTED.value())
-			.setMessage("Please verify throw otp sent on your eamil")
-			.setData(mapToUserResponse(user)),HttpStatus.ACCEPTED);
+	    User user = userRepository.findByUserName(userRequest.getEmail().split("@")[0]).map(u -> {
+	        if (u.isEmailValidated()) {
+	            throw new UserAlreadyExistByEmailException("User already exists with the specified email");
+	        } else {
+	            // Send an email OTP
+	        }
+	        return u;
+	    }).orElseGet(() -> saveUser(userRequest)); 
+
+	    return new ResponseEntity<>(
+	            responseStructure.setStatus(HttpStatus.ACCEPTED.value())
+	                    .setMessage("Please verify through OTP sent to your email")
+	                    .setData(mapToUserResponse(user)),
+	                    	HttpStatus.ACCEPTED);
 	}
+
 }
 
 
