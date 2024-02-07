@@ -1,8 +1,12 @@
 package com.shoppingcart.serviceimpl;
 
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.codec.Encoder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.shoppingcart.entity.Customer;
@@ -17,9 +21,11 @@ import com.shoppingcart.service.AuthService;
 import com.shoppingcart.utility.ResponseStructure;
 
 import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Service
 public class AuthServiceImpl implements AuthService{
 	
@@ -29,7 +35,11 @@ public class AuthServiceImpl implements AuthService{
 
 	private UserRepository userRepository;
 	
+	private PasswordEncoder passwordEncoder;
+	
 	private ResponseStructure<UserResponse> responseStructure;
+	
+	
 
 	public <T extends User> T mapToUserRequest(UserRequest userRequest) {
 		User user=null;
@@ -42,22 +52,23 @@ public class AuthServiceImpl implements AuthService{
 			break;
 		}
 				user.setEmail(userRequest.getEmail());
-				user.setPassword(userRequest.getPassword());
+				user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
 				user.setUserName(user.getEmail().split("@")[0]);
 				user.setUserRole(userRequest.getUserRole());
 		 return (T) user;
 	}
 	
-	private User saveUser(User user) {
-		switch (user.getUserRole()) {
+	private User saveUser(UserRequest userRequest) {
+
+		User user=null;
+		switch (userRequest.getUserRole()) {
 		case CUSTOMER->{
-			user=customerRepository.save((Customer)user);
+			user= customerRepository.save(mapToUserRequest(userRequest));
 		}
 		case SELLER->{
-			user=sellerRepository.save((Seller)user);
+			user=sellerRepository.save(mapToUserRequest(userRequest));
 		}
 		default-> throw new RuntimeException("User Role Should be SELLER/CUSTOMER");
-			
 		}
 		return user;
 	}
@@ -76,16 +87,19 @@ public class AuthServiceImpl implements AuthService{
 	
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userRequest) {
-		User user = mapToUserRequest(userRequest);
-		user=saveUser(user);
-		
-		UserResponse response = mapToUserResponse(user);
-		responseStructure.setStatus(HttpStatus.CREATED.value());
-		responseStructure.setMessage("USER REGISTERED");
-		responseStructure.setData(response);
-		return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure,HttpStatus.CREATED);
+	User user=userRepository.findByUserName(userRequest.getEmail().split("@")[0]).map(u->{
+		if(u.isEmailValidated()) {
+			throw new RuntimeException("User Already exist eith the specified Id");
+		}
+		else {
+			//Send an email otp 
+		}
+		return u;
+	}).orElse(saveUser(userRequest));
+	return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure.setStatus(HttpStatus.ACCEPTED.value())
+			.setMessage("Please verify throw otp sent on your eamil")
+			.setData(mapToUserResponse(user)),HttpStatus.ACCEPTED);
 	}
-
 }
 
 
