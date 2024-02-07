@@ -1,5 +1,6 @@
 package com.shoppingcart.serviceimpl;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,6 +101,18 @@ public class AuthServiceImpl implements AuthService{
 			.setMessage("Please verify throw otp sent on your eamil")
 			.setData(mapToUserResponse(user)),HttpStatus.ACCEPTED);
 	}
+	
+	public void removeNonVerifiedUser() {
+		List<User> list = userRepository.findByisEmailValidatedFalse();
+		if(!list.isEmpty()) {
+			for(User user:list) {
+				userRepository.delete(user);
+			}
+		}
+		
+	}
+	
+	
 }
 
 

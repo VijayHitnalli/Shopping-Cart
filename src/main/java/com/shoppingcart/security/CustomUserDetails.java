@@ -8,10 +8,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import com.shoppingcart.entity.User;
 
 import lombok.AllArgsConstructor;
-@AllArgsConstructor
+
 public class CustomUserDetails implements UserDetails{
 	
 	private User user;
+	
+	
+	public CustomUserDetails(User user) {
+		super();
+		this.user = user;
+	}
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -54,5 +60,7 @@ public class CustomUserDetails implements UserDetails{
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	
 
 }
