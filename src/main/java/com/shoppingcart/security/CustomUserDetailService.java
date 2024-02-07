@@ -3,6 +3,7 @@ package com.shoppingcart.security;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
 
 import com.shoppingcart.exception.UserNotFoundException;
 import com.shoppingcart.repository.UserRepository;
@@ -10,6 +11,7 @@ import com.shoppingcart.repository.UserRepository;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
+@Service
 public class CustomUserDetailService implements UserDetailsService{
 
 	private UserRepository userRepository;
