@@ -46,4 +46,8 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	public ResponseEntity<Object> handleUserAlreadyExistByEmail(UserAlreadyExistByEmailException exception){
 		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "User eith given Email Id is Alreday Exist");
 	}
+	@ExceptionHandler(InvalidOTPException.class)
+	public ResponseEntity<Object> handleUserAlreadyExistByEmail(InvalidOTPException exception){
+		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "Your OTP is expired generate again");
+	}
 }
