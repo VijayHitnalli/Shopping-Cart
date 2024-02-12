@@ -20,7 +20,6 @@ public class CustomUserDetailService implements UserDetailsService{
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		return userRepository.findByUsername(username).map(user-> new CustomUserDetails(user))
 				.orElseThrow(()->new UserNotFoundException("Failde To Verify the User"));
-		
 	}
 
 }

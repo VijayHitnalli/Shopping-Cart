@@ -3,6 +3,7 @@ package com.shoppingcart.serviceimpl;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -203,7 +204,6 @@ public class AuthServiceImpl implements AuthService {
 				.expiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
 				.user(user)
 				.build());
-
 	}
 
 	// -------------------------------------------------------------------------------------------------------
@@ -326,9 +326,6 @@ public class AuthServiceImpl implements AuthService {
 	//ACCEPTING @CookieValue(New)
 	@Override
 	public ResponseEntity<SimpleResponseStructure<AuthResponse>> logout(String accessToken, String refreshToken,HttpServletResponse response) {
-		if(accessToken == null && refreshToken == null) {
-			throw new UserNotLoggedInException("LogIn first...!");
-		}
 		accessTokenRepository.findByToken(accessToken).ifPresent(token->{
 			token.setBlocked(true);
 			accessTokenRepository.save(token);
@@ -344,5 +341,15 @@ public class AuthServiceImpl implements AuthService {
 			simpleResponseStructure.setStatus(HttpStatus.OK.value());
 		return new ResponseEntity<SimpleResponseStructure<AuthResponse>>(simpleResponseStructure,HttpStatus.OK);
 	}
+	
+	public void deleteExpiredTokens() {
+		LocalDateTime currentTime=LocalDateTime.now();
+		List<AccessToken> accessTokens = accessTokenRepository.findAllByExpirationBefore(currentTime);
+		List<RefreshToken> refreshToken = refreshTokenRepository.findAllByExpirationBefore(currentTime);
+		accessTokenRepository.deleteAll();
+		refreshTokenRepository.deleteAll();
+		
+	}
+	
 
 }

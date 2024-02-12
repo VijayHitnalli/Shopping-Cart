@@ -1,6 +1,8 @@
 package com.shoppingcart.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,13 +18,13 @@ import com.shoppingcart.service.AuthService;
 import com.shoppingcart.utility.ResponseStructure;
 import com.shoppingcart.utility.SimpleResponseStructure;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 @RestController
 @RequestMapping("/api/v1")
+@EnableMethodSecurity
 public class AuthController {
 	
 	private AuthService authService;

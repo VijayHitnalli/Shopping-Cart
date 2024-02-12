@@ -17,4 +17,8 @@ public class ScheduleJobs {
 		authServiceImpl.removeNonVerifiedUser();
 		System.out.println("Deleted...!");
 	}
+	@Scheduled(cron = "0 0 0 * * ?")
+	public void autoDeleteExpiredTokens() {
+		authServiceImpl.deleteExpiredTokens();
+	}
 }
