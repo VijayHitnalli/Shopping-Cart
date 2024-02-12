@@ -16,4 +16,3 @@ public class ShoppingCartApplication {
 		System.out.println("ShoppingCart");
 	}
 }
-

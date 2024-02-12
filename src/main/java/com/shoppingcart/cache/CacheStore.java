@@ -9,10 +9,10 @@ public class CacheStore<T> {
 		
 	private Cache<String, T> cache;
 
-	public CacheStore(Duration expire) {
+	public CacheStore(Duration expiry) {
 		super();
 		this.cache = CacheBuilder.newBuilder()
-				.expireAfterWrite(expire)
+				.expireAfterWrite(expiry)
 				.concurrencyLevel(Runtime.getRuntime().availableProcessors())
 				.build();
 	}

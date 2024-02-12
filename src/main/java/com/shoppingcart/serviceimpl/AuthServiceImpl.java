@@ -1,46 +1,54 @@
 package com.shoppingcart.serviceimpl;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
-import org.eclipse.angus.mail.handlers.message_rfc822;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.codec.Encoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.shoppingcart.cache.CacheStore;
+import com.shoppingcart.entity.AccessToken;
 import com.shoppingcart.entity.Customer;
+import com.shoppingcart.entity.RefreshToken;
 import com.shoppingcart.entity.Seller;
 import com.shoppingcart.entity.User;
 import com.shoppingcart.exception.InvalidOTPException;
 import com.shoppingcart.exception.UserAlreadyExistByEmailException;
-import com.shoppingcart.exception.UserNotFoundException;
+import com.shoppingcart.repository.AccessTokenRepository;
 import com.shoppingcart.repository.CustomerRepository;
+import com.shoppingcart.repository.RefreshTokenRepository;
 import com.shoppingcart.repository.SellerRepository;
 import com.shoppingcart.repository.UserRepository;
+import com.shoppingcart.requestdto.AuthRequest;
 import com.shoppingcart.requestdto.OtpModel;
 import com.shoppingcart.requestdto.UserRequest;
+import com.shoppingcart.responsedto.AuthResponse;
 import com.shoppingcart.responsedto.UserResponse;
+import com.shoppingcart.security.JwtService;
 import com.shoppingcart.service.AuthService;
+import com.shoppingcart.utility.CookieManager;
 import com.shoppingcart.utility.MessageStructure;
 import com.shoppingcart.utility.ResponseStructure;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@AllArgsConstructor
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -53,6 +61,8 @@ public class AuthServiceImpl implements AuthService {
 	private PasswordEncoder passwordEncoder;
 
 	private ResponseStructure<UserResponse> responseStructure;
+	
+	private ResponseStructure<AuthResponse> authResponseStructure;
 
 	private CacheStore<String> otpCacheStore;
 
@@ -60,46 +70,49 @@ public class AuthServiceImpl implements AuthService {
 
 	private JavaMailSender javaMailSender;
 
-	public <T extends User> T mapToUserRequest(UserRequest userRequest) {
-		User user = null;
-		switch (userRequest.getUserRole()) {
-		case CUSTOMER:
-			user = new Customer();
-			break;
-		case SELLER:
-			user = new Seller();
-			break;
-		default:
-			break;
-		}
-		user.setEmail(userRequest.getEmail());
-		user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-		user.setUserName(user.getEmail().split("@")[0]);
-		user.setUserRole(userRequest.getUserRole());
-		return (T) user;
+	private AuthenticationManager authenticationManager;
+	
+	private CookieManager cookieManager;
+	
+	private JwtService jwtService;
+	
+	private AccessTokenRepository accessTokenRepository;
+	
+	private RefreshTokenRepository refreshTokenRepository;
+	
+	
+	
+	@Value("${myapp.access.expiry}")
+	private int accessExpiryInseconds;
+	
+	@Value("${myapp.refresh.expiry}")
+	private int refreshExpiryInseconds;
+	
+
+	public AuthServiceImpl(CustomerRepository customerRepository, SellerRepository sellerRepository,
+			UserRepository userRepository, PasswordEncoder passwordEncoder,
+			ResponseStructure<UserResponse> responseStructure, CacheStore<String> otpCacheStore,
+			CacheStore<User> userCacheStore, JavaMailSender javaMailSender, AuthenticationManager authenticationManager,
+			CookieManager cookieManager,JwtService jwtService,
+			ResponseStructure<AuthResponse> authResponseStructure,AccessTokenRepository accessTokenRepository,RefreshTokenRepository refreshTokenRepository) {
+		super();
+		this.customerRepository = customerRepository;
+		this.sellerRepository = sellerRepository;
+		this.userRepository = userRepository;
+		this.passwordEncoder = passwordEncoder;
+		this.responseStructure = responseStructure;
+		this.otpCacheStore = otpCacheStore;
+		this.userCacheStore = userCacheStore;
+		this.javaMailSender = javaMailSender;
+		this.authenticationManager = authenticationManager;
+		this.cookieManager = cookieManager;
+		this.jwtService=jwtService;
+		this.accessTokenRepository=accessTokenRepository;
+		this.refreshTokenRepository=refreshTokenRepository;
+		this.authResponseStructure=authResponseStructure;
 	}
 
-	private User saveUser(UserRequest userRequest) {
 
-		User user = null;
-		switch (userRequest.getUserRole()) {
-		case CUSTOMER -> {
-			user = customerRepository.save(mapToUserRequest(userRequest));
-		}
-		case SELLER -> {
-			user = sellerRepository.save(mapToUserRequest(userRequest));
-		}
-		default -> throw new RuntimeException("User Role Should be SELLER/CUSTOMER");
-		}
-		return user;
-	}
-
-	public UserResponse mapToUserResponse(User user) {
-		return UserResponse.builder().userId(user.getUserId()).userName(user.getUserName()).email(user.getEmail())
-				.userRole(user.getUserRole()).isEmailValidated(user.isEmailValidated()).isDeleted(user.isDeleted())
-				.build();
-
-	}
 
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userRequest) {
@@ -116,7 +129,6 @@ public class AuthServiceImpl implements AuthService {
 		} catch (Exception e) {
 			log.error("The Email Address doesn't exist");
 		}
-		
 
 		return new ResponseEntity<ResponseStructure<UserResponse>>(
 				responseStructure.setStatus(HttpStatus.ACCEPTED.value())
@@ -127,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(OtpModel otpModel) {
 		User user = userCacheStore.get(otpModel.getEmail());
-		String otp = otpCacheStore.get(otpModel.getOtp());
+		String otp = otpCacheStore.get(otpModel.getEmail());
 		if (otp == null)
 			throw new InvalidOTPException("OTP Expired");
 		if (user == null)
@@ -148,24 +160,101 @@ public class AuthServiceImpl implements AuthService {
 		return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure, HttpStatus.CREATED);
 	}
 
-	private void sendOtpToMail(User user, String otp) throws MessagingException {
-		sendMail(MessageStructure.builder()
-				.to(user.getEmail())
-				.subject("Complete Your Registration Process...!")
-				.sentDate(new Date())
-				.text("hey " + user.getUserName() + " Good to see you interested in flipkart,"
-						+ " Complete your registation using OTP <br>" + "<h1>" + otp + "</h1><br>" + "<br><br>"
-						+ " with best regards <br>" + " ShoppingCart")
-				.build());
+	@Override
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,HttpServletResponse response) {
+		String username = authRequest.getEmail().split("@")[0];
+		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username,
+				authRequest.getPassword());
+		Authentication authentication = authenticationManager.authenticate(token);
+		if(!authentication.isAuthenticated()) throw new UsernameNotFoundException("Failed to Authenticate the user");
+		else {
+			//generating the cookies and authResponse and returning to the client
+			return userRepository.findByUsername(username).map(user->{
+				grantAccess(response, user);
+				return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value()).setData(AuthResponse.builder()
+						.userId(user.getUserId())
+						.username(user.getUsername())
+						.role(user.getUserRole().name())
+						.isAuthenticated(true)
+						.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
+						  .refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
+						.build())
+						.setMessage("LogIn Successful...!"));
+			}).get();
+		}
 	}
 	
-	private void registrtionSuccessful(User user,String otp) throws MessagingException {
-		sendMail(MessageStructure.builder()
-				.to(user.getEmail())
-				.subject("Thank You for Registering...!")
+	private void grantAccess(HttpServletResponse response,User user) {
+		//generating access and refresh token
+		String generateAccessToken = jwtService.generateAccessToken(user.getUsername());
+		String generateRefreshToken = jwtService.generateRefreshToken(user.getUsername());
+		
+		//Adding access and refresh tokens cookies ton the response
+		response.addCookie(cookieManager.configure(new Cookie("at",generateAccessToken), accessExpiryInseconds));
+		response.addCookie(cookieManager.configure(new Cookie("rt",generateRefreshToken), refreshExpiryInseconds));
+		
+		//saving the access and refresh cookie into the database
+		accessTokenRepository.save(AccessToken.builder()
+				.token(generateAccessToken)
+				.isBlocked(false)
+				.expiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
+				.build());
+		refreshTokenRepository.save(RefreshToken.builder()
+				.token(generateRefreshToken)
+				.isBlocked(false)
+				.expiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
+				.build());
+
+		
+	}
+
+	// -------------------------------------------------------------------------------------------------------
+	private <T extends User> T mapToUserRequest(UserRequest userRequest) {
+		User user = null;
+		switch (userRequest.getUserRole()) {
+		case CUSTOMER:
+			user = new Customer();
+			break;
+		case SELLER:
+			user = new Seller();
+			break;
+		default:
+			break;
+		}
+		user.setEmail(userRequest.getEmail());
+		user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+		user.setUsername(user.getEmail().split("@")[0]);
+		user.setUserRole(userRequest.getUserRole());
+		return (T) user;
+	}
+
+	private User saveUser(UserRequest userRequest) {
+
+		User user = null;
+		switch (userRequest.getUserRole()) {
+		case CUSTOMER -> {
+			user = customerRepository.save(mapToUserRequest(userRequest));
+		}
+		case SELLER -> {
+			user = sellerRepository.save(mapToUserRequest(userRequest));
+		}
+		default -> throw new RuntimeException("User Role Should be SELLER/CUSTOMER");
+		}
+		return user;
+	}
+
+	private UserResponse mapToUserResponse(User user) {
+		return UserResponse.builder().userId(user.getUserId()).username(user.getUsername()).email(user.getEmail())
+				.userRole(user.getUserRole()).isEmailValidated(user.isEmailValidated()).isDeleted(user.isDeleted())
+				.build();
+
+	}
+
+	private void sendOtpToMail(User user, String otp) throws MessagingException {
+		sendMail(MessageStructure.builder().to(user.getEmail()).subject("Complete Your Registration Process...!")
 				.sentDate(new Date())
-				.text("hey " + user.getUserName() + " Good to see you interested in flipkart,"
-						+ "Congratulation your Registration Successful...!"
+				.text("hey " + user.getUsername() + " Good to see you interested in flipkart,"
+						+ " Complete your registation using OTP <br>" + "<h1>" + otp + "</h1><br>" + "<br><br>"
 						+ " with best regards <br>" + " ShoppingCart")
 				.build());
 	}
@@ -180,11 +269,19 @@ public class AuthServiceImpl implements AuthService {
 		helper.setText(messageStructure.getText(), true);
 		javaMailSender.send(mimeMessage);
 	}
+
 	private String otpGeneration() {
 		return String.valueOf(new Random().nextInt(100000, 999999));
 	}
 
-	
+	private void registrtionSuccessful(User user, String otp) throws MessagingException {
+		sendMail(MessageStructure.builder().to(user.getEmail()).subject("Thank You for Registering...!")
+				.sentDate(new Date())
+				.text("hey " + user.getUsername() + " Good to see you interested in flipkart,"
+						+ "Congratulation your Registration Successful...!" + " with best regards <br>"
+						+ " ShoppingCart")
+				.build());
+	}
 
 	// ********REMOVING NON-VERIFIED USER***********///
 	public void removeNonVerifiedUser() {

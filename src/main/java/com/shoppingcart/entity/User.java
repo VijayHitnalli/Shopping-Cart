@@ -32,15 +32,13 @@ public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int userId;
-	private String userName;
+	private String username;
 	private String email;
 	private String password;
 	@Enumerated(EnumType.STRING)
 	private UserRole userRole;
 	private boolean isEmailValidated;
 	private boolean isDeleted;
-	
-	
 	
 
 }
