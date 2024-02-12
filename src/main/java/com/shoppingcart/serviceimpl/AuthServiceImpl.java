@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -67,8 +68,8 @@ public class AuthServiceImpl implements AuthService {
 	private ResponseStructure<UserResponse> responseStructure;
 
 	private ResponseStructure<AuthResponse> authResponseStructure;
-	
-	private SimpleResponseStructure<AuthResponse> simpleResponseStructure;
+
+	private SimpleResponseStructure simpleResponseStructure;
 
 	private CacheStore<String> otpCacheStore;
 
@@ -97,7 +98,8 @@ public class AuthServiceImpl implements AuthService {
 			ResponseStructure<UserResponse> responseStructure, CacheStore<String> otpCacheStore,
 			CacheStore<User> userCacheStore, JavaMailSender javaMailSender, AuthenticationManager authenticationManager,
 			CookieManager cookieManager, JwtService jwtService, ResponseStructure<AuthResponse> authResponseStructure,
-			AccessTokenRepository accessTokenRepository, RefreshTokenRepository refreshTokenRepository,SimpleResponseStructure simpleResponseStructure) {
+			AccessTokenRepository accessTokenRepository, RefreshTokenRepository refreshTokenRepository,
+			SimpleResponseStructure simpleResponseStructure) {
 		super();
 		this.customerRepository = customerRepository;
 		this.sellerRepository = sellerRepository;
@@ -113,7 +115,7 @@ public class AuthServiceImpl implements AuthService {
 		this.accessTokenRepository = accessTokenRepository;
 		this.refreshTokenRepository = refreshTokenRepository;
 		this.authResponseStructure = authResponseStructure;
-		this.simpleResponseStructure=simpleResponseStructure;
+		this.simpleResponseStructure = simpleResponseStructure;
 	}
 
 	@Override
@@ -189,7 +191,6 @@ public class AuthServiceImpl implements AuthService {
 		// generating access and refresh token
 		String generateAccessToken = jwtService.generateAccessToken(user.getUsername());
 		String generateRefreshToken = jwtService.generateRefreshToken(user.getUsername());
-		
 
 		// Adding access and refresh tokens cookies ton the response
 		response.addCookie(cookieManager.configure(new Cookie("at", generateAccessToken), accessExpiryInseconds));
@@ -197,13 +198,9 @@ public class AuthServiceImpl implements AuthService {
 
 		// saving the access and refresh cookie into the database
 		accessTokenRepository.save(AccessToken.builder().token(generateAccessToken).isBlocked(false)
-				.expiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
-				.user(user)
-				.build());
+				.expiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds)).user(user).build());
 		refreshTokenRepository.save(RefreshToken.builder().token(generateRefreshToken).isBlocked(false)
-				.expiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
-				.user(user)
-				.build());
+				.expiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds)).user(user).build());
 	}
 
 	// -------------------------------------------------------------------------------------------------------
@@ -291,9 +288,8 @@ public class AuthServiceImpl implements AuthService {
 		}
 	}
 
-	
-	//ACCEPTING HttpRequest and HttpRespoone(Older way to LOGOUT)
-	
+	// ACCEPTING HttpRequest and HttpRespoone(Older way to LOGOUT)
+
 //	@Override
 //	public ResponseEntity<ResponseStructure<AuthResponse>> logout(HttpServletRequest request,
 //			HttpServletResponse response) {
@@ -321,35 +317,64 @@ public class AuthServiceImpl implements AuthService {
 //		return new ResponseEntity<ResponseStructure<AuthResponse>>(authResponseStructure, HttpStatus.OK);
 //	}
 
-	
-	
-	//ACCEPTING @CookieValue(New)
+	// ACCEPTING @CookieValue(New)
 	@Override
-	public ResponseEntity<SimpleResponseStructure<AuthResponse>> logout(String accessToken, String refreshToken,HttpServletResponse response) {
-		accessTokenRepository.findByToken(accessToken).ifPresent(token->{
+	public ResponseEntity<SimpleResponseStructure> logout(String accessToken, String refreshToken,
+			HttpServletResponse response) {
+		accessTokenRepository.findByToken(accessToken).ifPresent(token -> {
 			token.setBlocked(true);
 			accessTokenRepository.save(token);
 		});
-		refreshTokenRepository.findByToken(refreshToken).ifPresent(token->{
+		refreshTokenRepository.findByToken(refreshToken).ifPresent(token -> {
 			token.setBlocked(true);
 			refreshTokenRepository.save(token);
 		});
-			response.addCookie(cookieManager.invalidate(new Cookie("at", "")));
-			response.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
-		
-			simpleResponseStructure.setMessage("Logout Successfully...!");
-			simpleResponseStructure.setStatus(HttpStatus.OK.value());
-		return new ResponseEntity<SimpleResponseStructure<AuthResponse>>(simpleResponseStructure,HttpStatus.OK);
+		response.addCookie(cookieManager.invalidate(new Cookie("at", "")));
+		response.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
+
+		simpleResponseStructure.setMessage("Logout Successfully...!");
+		simpleResponseStructure.setStatus(HttpStatus.OK.value());
+		return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
 	}
-	
+
 	public void deleteExpiredTokens() {
-		LocalDateTime currentTime=LocalDateTime.now();
+		LocalDateTime currentTime = LocalDateTime.now();
 		List<AccessToken> accessTokens = accessTokenRepository.findAllByExpirationBefore(currentTime);
 		List<RefreshToken> refreshToken = refreshTokenRepository.findAllByExpirationBefore(currentTime);
 		accessTokenRepository.deleteAll();
 		refreshTokenRepository.deleteAll();
-		
+
+	}
+
+	public ResponseEntity<SimpleResponseStructure> revokeOtherDevices(String accessToken, String refreshToken, HttpServletResponse response) {
+	    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+	    if (username != null) {
+	        userRepository.findByUsername(username).ifPresent(user -> {
+	            blockAccessTokens(accessTokenRepository.findAllByUserAndIsBlockedAndTokenNot(user, false, accessToken));
+	            blockRefreshTokens(refreshTokenRepository.findAllByUserAndIsBlockedAndTokenNot(user, false, refreshToken));
+	        });
+	    } else {
+	    	simpleResponseStructure.setMessage("Failed to authorize");
+			simpleResponseStructure.setStatus(HttpStatus.UNAUTHORIZED.value());
+	        return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
+	    }
+	    simpleResponseStructure.setMessage("Revoked Successfully from other devices...!");
+		simpleResponseStructure.setStatus(HttpStatus.OK.value());
+	    return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
 	}
 	
+	private void blockAccessTokens(List<AccessToken> accessTokens) {
+		accessTokens.forEach(at -> {
+			at.setBlocked(true);
+			accessTokenRepository.save(at);
+		});
+	}
+
+	private void blockRefreshTokens(List<RefreshToken> refreshTokens) {
+		refreshTokens.forEach(rt -> {
+			rt.setBlocked(true);
+			refreshTokenRepository.save(rt);
+		});
+	}
 
 }

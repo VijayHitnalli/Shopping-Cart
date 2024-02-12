@@ -26,26 +26,33 @@ import lombok.AllArgsConstructor;
 @RequestMapping("/api/v1")
 @EnableMethodSecurity
 public class AuthController {
-	
+
 	private AuthService authService;
-	
 
 	@PostMapping("/register")
-	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(@RequestBody UserRequest userRequest){
+	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(@RequestBody UserRequest userRequest) {
 		return authService.registerUser(userRequest);
 	}
+
 	@PostMapping("/verify-otp")
-	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTO(@RequestBody OtpModel otpModel){
+	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTO(@RequestBody OtpModel otpModel) {
 		return authService.verifyOTP(otpModel);
 	}
-	
+
 	@PostMapping("/login")
-	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,HttpServletResponse response){
-		return authService.login(authRequest,response);
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,
+			HttpServletResponse response) {
+		return authService.login(authRequest, response);
 	}
+
 	@PostMapping("/logout")
-	public ResponseEntity<SimpleResponseStructure<AuthResponse>> logout(@CookieValue(name = "at") String accessToken, @CookieValue(name = "rt") String refreshToken,HttpServletResponse response){
-		return authService.logout(accessToken,refreshToken,response);
+	public ResponseEntity<SimpleResponseStructure> logout(@CookieValue(name = "at") String accessToken,
+			@CookieValue(name = "rt") String refreshToken, HttpServletResponse response) {
+		return authService.logout(accessToken, refreshToken, response);
 	}
-	
+	@PostMapping("/revoke-other")
+	public ResponseEntity<SimpleResponseStructure> revokeOtherDevices(@CookieValue(name = "at") String accessToken,@CookieValue(name = "rt") String refreshToken, HttpServletResponse response) {
+		return authService.revokeOtherDevices(accessToken, refreshToken, response);
+	}
+
 }
