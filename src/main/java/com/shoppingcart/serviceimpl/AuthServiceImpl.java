@@ -391,7 +391,7 @@ public class AuthServiceImpl implements AuthService {
 			simpleResponseStructure.setStatus(HttpStatus.UNAUTHORIZED.value());
 	        return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
 		}
-		  simpleResponseStructure.setMessage("Revoked Successfully from other devices...!");
+		  simpleResponseStructure.setMessage("Revoked Successfully from all devices...!");
 			simpleResponseStructure.setStatus(HttpStatus.OK.value());
 		    return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
 	}
