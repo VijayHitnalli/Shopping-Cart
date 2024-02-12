@@ -377,4 +377,36 @@ public class AuthServiceImpl implements AuthService {
 		});
 	}
 
+	@Override
+	public ResponseEntity<SimpleResponseStructure> revokeAllDevices(String accessToken, String refreshToken,
+			HttpServletResponse response) {
+		String username=SecurityContextHolder.getContext().getAuthentication().getName();
+		if(username != null) {
+			userRepository.findByUsername(username).ifPresent(user->{
+				blockAllAccessTokens(accessTokenRepository.findAllByUserAndIsBlocked(user, false));
+				blockAllRefreshTokens(refreshTokenRepository.findAllByUserAndIsBlocked(user, false));
+			});
+		}else {
+			simpleResponseStructure.setMessage("Failed to authorize");
+			simpleResponseStructure.setStatus(HttpStatus.UNAUTHORIZED.value());
+	        return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
+		}
+		  simpleResponseStructure.setMessage("Revoked Successfully from other devices...!");
+			simpleResponseStructure.setStatus(HttpStatus.OK.value());
+		    return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
+	}
+	
+	private void blockAllAccessTokens(List<AccessToken> accessTokens) {
+		accessTokens.forEach(at->{
+			at.setBlocked(true);
+			accessTokenRepository.save(at);
+		});
+	}
+	private void blockAllRefreshTokens(List<RefreshToken> refreshToken) {
+		refreshToken.forEach(rt->{
+			rt.setBlocked(true);
+			refreshTokenRepository.save(rt);
+		});
+	}
+
 }
