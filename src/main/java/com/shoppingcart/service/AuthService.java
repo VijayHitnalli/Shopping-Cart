@@ -10,7 +10,6 @@ import com.shoppingcart.responsedto.UserResponse;
 import com.shoppingcart.utility.ResponseStructure;
 import com.shoppingcart.utility.SimpleResponseStructure;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public interface AuthService {
@@ -21,7 +20,9 @@ public interface AuthService {
 	
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest, HttpServletResponse response);
 
-	public ResponseEntity<SimpleResponseStructure<AuthResponse>> logout(String accessToken,
+	public ResponseEntity<SimpleResponseStructure> logout(String accessToken,
 			String refreshToken,HttpServletResponse response);
+
+	public ResponseEntity<SimpleResponseStructure> revokeOtherDevices(String accessToken, String refreshToken, HttpServletResponse response);
 
 }

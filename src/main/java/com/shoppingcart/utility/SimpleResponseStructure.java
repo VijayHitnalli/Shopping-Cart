@@ -14,7 +14,7 @@ import lombok.Setter;
 @Builder
 @Setter
 @Getter
-public class SimpleResponseStructure<T> {
+public class SimpleResponseStructure {
 	private int status;
 	private String message;
 }
