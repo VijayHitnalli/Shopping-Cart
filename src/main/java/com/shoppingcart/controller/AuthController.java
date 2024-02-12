@@ -59,5 +59,9 @@ public class AuthController {
 	public ResponseEntity<SimpleResponseStructure> revokeAllDevices(@CookieValue(name = "at") String accessToken,@CookieValue(name = "rt") String refreshToken, HttpServletResponse response) {
 		return authService.revokeAllDevices(accessToken, refreshToken, response);
 	}
+	@PostMapping("/refresh-token")
+	public ResponseEntity<SimpleResponseStructure> refreshToken(@CookieValue(name = "at") String accessToken,@CookieValue(name = "rt") String refreshToken, HttpServletResponse response){
+		return authService.refreshTokens(accessToken, refreshToken, response);
+	}
 
 }
