@@ -40,14 +40,14 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	
 	@ExceptionHandler(UserNotFoundException.class)
 	public ResponseEntity<Object> handleUserNotFoundById(UserNotFoundException exception){
-		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "User Not found with given Id");
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Username or password incorrect");
 	}
 	@ExceptionHandler(UserAlreadyExistByEmailException.class)
 	public ResponseEntity<Object> handleUserAlreadyExistByEmail(UserAlreadyExistByEmailException exception){
-		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "User eith given Email Id is Alreday Exist");
+		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "User with given Email Id is Alreday Exist");
 	}
 	@ExceptionHandler(InvalidOTPException.class)
-	public ResponseEntity<Object> handleUserAlreadyExistByEmail(InvalidOTPException exception){
+	public ResponseEntity<Object> handleInvalidOTP(InvalidOTPException exception){
 		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "Your OTP is expired generate again");
 	}
 }

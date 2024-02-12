@@ -9,6 +9,6 @@ import com.shoppingcart.entity.User;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
 	boolean existsByEmail(String email);
-	Optional<User> findByUserName(String username);
+	Optional<User> findByUsername(String username);
 	  List<User> findByisEmailValidatedFalse();
 }
