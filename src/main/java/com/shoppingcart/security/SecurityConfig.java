@@ -9,9 +9,11 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.stereotype.Component;
 
 import lombok.AllArgsConstructor;
@@ -25,6 +27,8 @@ public class SecurityConfig {
 	
 	
 	private  CustomUserDetailService userDetailService;
+	
+	private JwtFilter jwtFilter;
 
 	@Bean
 	PasswordEncoder passwordEncoder() {
@@ -37,7 +41,11 @@ public class SecurityConfig {
 				.permitAll()
 				.anyRequest().authenticated())
 //				.httpBasic(Customizer.withDefaults())
-				.formLogin(Customizer.withDefaults())
+//				.formLogin(Customizer.withDefaults())
+				.sessionManagement(management->
+				management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.authenticationProvider(authenticationProvider())
+				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 				.build();
 	}
 	
