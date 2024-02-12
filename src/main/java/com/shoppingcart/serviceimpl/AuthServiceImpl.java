@@ -28,6 +28,7 @@ import com.shoppingcart.entity.Seller;
 import com.shoppingcart.entity.User;
 import com.shoppingcart.exception.InvalidOTPException;
 import com.shoppingcart.exception.UserAlreadyExistByEmailException;
+
 import com.shoppingcart.exception.UserNotLoggedInException;
 import com.shoppingcart.repository.AccessTokenRepository;
 import com.shoppingcart.repository.CustomerRepository;
@@ -409,4 +410,52 @@ public class AuthServiceImpl implements AuthService {
 		});
 	}
 
+	@Override
+	public ResponseEntity<SimpleResponseStructure> refreshTokens(String accessToken, String refreshToken,
+	        HttpServletResponse response) {
+	    
+	    Optional<AccessToken> optionalAccessToken = accessTokenRepository.findByToken(accessToken);
+	    if (optionalAccessToken.isEmpty()) {
+	        throw new UserNotLoggedInException("Invalid access token. Please log in again.");
+	    }
+	    blockAccessTokens(accessToken);
+
+	    Optional<RefreshToken> optionalRefreshToken = refreshTokenRepository.findByToken(refreshToken);
+	    if (optionalRefreshToken.isEmpty() || optionalRefreshToken.get().isBlocked()) {
+	        throw new UserNotLoggedInException("Invalid refresh token. Please log in again.");
+	    }
+	    AuthResponse authResponse = generateNewTokens(optionalRefreshToken.get().getUser());
+	    blockRefreshTokens(refreshToken);
+
+	    simpleResponseStructure.setStatus(HttpStatus.OK.value());
+	    simpleResponseStructure.setMessage("Tokens refreshed successfully.");
+	    return ResponseEntity.ok(simpleResponseStructure);
+	}
+	
+	private AuthResponse generateNewTokens(User user) {
+	    String newAccessToken = jwtService.generateAccessToken(user.getUsername());
+	    String newRefreshToken = jwtService.generateRefreshToken(user.getUsername());
+	    return new AuthResponse(user.getUserId(), user.getUsername(), user.getUserRole().name(), true,
+                LocalDateTime.now().plusSeconds(accessExpiryInseconds),
+                LocalDateTime.now().plusSeconds(refreshExpiryInseconds));
+	}
+
+	private void blockAccessTokens(String accessTokens) {
+		Optional<AccessToken> token = accessTokenRepository.findByToken(accessTokens);
+		 token.ifPresent(at -> {
+		        at.setBlocked(true);
+		        accessTokenRepository.save(at);
+		    });
+	}
+
+	private void blockRefreshTokens(String refreshTokens) {
+		Optional<RefreshToken> token = refreshTokenRepository.findByToken(refreshTokens);
+		token.ifPresent(rt -> {
+	        rt.setBlocked(true);
+	        refreshTokenRepository.save(rt);
+	    });
+	}
+
+	
+	
 }
