@@ -1,6 +1,7 @@
 package com.shoppingcart.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +14,9 @@ import com.shoppingcart.responsedto.AuthResponse;
 import com.shoppingcart.responsedto.UserResponse;
 import com.shoppingcart.service.AuthService;
 import com.shoppingcart.utility.ResponseStructure;
+import com.shoppingcart.utility.SimpleResponseStructure;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 
@@ -38,4 +41,9 @@ public class AuthController {
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,HttpServletResponse response){
 		return authService.login(authRequest,response);
 	}
+	@PostMapping("/logout")
+	public ResponseEntity<SimpleResponseStructure<AuthResponse>> logout(@CookieValue(name = "at") String accessToken, @CookieValue(name = "rt") String refreshToken,HttpServletResponse response){
+		return authService.logout(accessToken,refreshToken,response);
+	}
+	
 }

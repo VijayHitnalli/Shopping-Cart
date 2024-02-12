@@ -26,6 +26,7 @@ import com.shoppingcart.entity.Seller;
 import com.shoppingcart.entity.User;
 import com.shoppingcart.exception.InvalidOTPException;
 import com.shoppingcart.exception.UserAlreadyExistByEmailException;
+import com.shoppingcart.exception.UserNotLoggedInException;
 import com.shoppingcart.repository.AccessTokenRepository;
 import com.shoppingcart.repository.CustomerRepository;
 import com.shoppingcart.repository.RefreshTokenRepository;
@@ -41,10 +42,12 @@ import com.shoppingcart.service.AuthService;
 import com.shoppingcart.utility.CookieManager;
 import com.shoppingcart.utility.MessageStructure;
 import com.shoppingcart.utility.ResponseStructure;
+import com.shoppingcart.utility.SimpleResponseStructure;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,8 +64,10 @@ public class AuthServiceImpl implements AuthService {
 	private PasswordEncoder passwordEncoder;
 
 	private ResponseStructure<UserResponse> responseStructure;
-	
+
 	private ResponseStructure<AuthResponse> authResponseStructure;
+	
+	private SimpleResponseStructure<AuthResponse> simpleResponseStructure;
 
 	private CacheStore<String> otpCacheStore;
 
@@ -71,30 +76,27 @@ public class AuthServiceImpl implements AuthService {
 	private JavaMailSender javaMailSender;
 
 	private AuthenticationManager authenticationManager;
-	
+
 	private CookieManager cookieManager;
-	
+
 	private JwtService jwtService;
-	
+
 	private AccessTokenRepository accessTokenRepository;
-	
+
 	private RefreshTokenRepository refreshTokenRepository;
-	
-	
-	
+
 	@Value("${myapp.access.expiry}")
 	private int accessExpiryInseconds;
-	
+
 	@Value("${myapp.refresh.expiry}")
 	private int refreshExpiryInseconds;
-	
 
 	public AuthServiceImpl(CustomerRepository customerRepository, SellerRepository sellerRepository,
 			UserRepository userRepository, PasswordEncoder passwordEncoder,
 			ResponseStructure<UserResponse> responseStructure, CacheStore<String> otpCacheStore,
 			CacheStore<User> userCacheStore, JavaMailSender javaMailSender, AuthenticationManager authenticationManager,
-			CookieManager cookieManager,JwtService jwtService,
-			ResponseStructure<AuthResponse> authResponseStructure,AccessTokenRepository accessTokenRepository,RefreshTokenRepository refreshTokenRepository) {
+			CookieManager cookieManager, JwtService jwtService, ResponseStructure<AuthResponse> authResponseStructure,
+			AccessTokenRepository accessTokenRepository, RefreshTokenRepository refreshTokenRepository,SimpleResponseStructure simpleResponseStructure) {
 		super();
 		this.customerRepository = customerRepository;
 		this.sellerRepository = sellerRepository;
@@ -106,13 +108,12 @@ public class AuthServiceImpl implements AuthService {
 		this.javaMailSender = javaMailSender;
 		this.authenticationManager = authenticationManager;
 		this.cookieManager = cookieManager;
-		this.jwtService=jwtService;
-		this.accessTokenRepository=accessTokenRepository;
-		this.refreshTokenRepository=refreshTokenRepository;
-		this.authResponseStructure=authResponseStructure;
+		this.jwtService = jwtService;
+		this.accessTokenRepository = accessTokenRepository;
+		this.refreshTokenRepository = refreshTokenRepository;
+		this.authResponseStructure = authResponseStructure;
+		this.simpleResponseStructure=simpleResponseStructure;
 	}
-
-
 
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userRequest) {
@@ -155,57 +156,54 @@ public class AuthServiceImpl implements AuthService {
 		}
 		UserResponse response = mapToUserResponse(user);
 		responseStructure.setStatus(HttpStatus.CREATED.value());
-		responseStructure.setMessage("Registration Successfil...!");
+		responseStructure.setMessage("Registration Successfull...!");
 		responseStructure.setData(response);
 		return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure, HttpStatus.CREATED);
 	}
 
 	@Override
-	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,HttpServletResponse response) {
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,
+			HttpServletResponse response) {
 		String username = authRequest.getEmail().split("@")[0];
 		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username,
 				authRequest.getPassword());
 		Authentication authentication = authenticationManager.authenticate(token);
-		if(!authentication.isAuthenticated()) throw new UsernameNotFoundException("Failed to Authenticate the user");
+		if (!authentication.isAuthenticated())
+			throw new UsernameNotFoundException("Failed to Authenticate the user");
 		else {
-			//generating the cookies and authResponse and returning to the client
-			return userRepository.findByUsername(username).map(user->{
+			// generating the cookies and authResponse and returning to the client
+			return userRepository.findByUsername(username).map(user -> {
 				grantAccess(response, user);
-				return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value()).setData(AuthResponse.builder()
-						.userId(user.getUserId())
-						.username(user.getUsername())
-						.role(user.getUserRole().name())
-						.isAuthenticated(true)
-						.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
-						  .refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
-						.build())
+				return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value())
+						.setData(AuthResponse.builder().userId(user.getUserId()).username(user.getUsername())
+								.role(user.getUserRole().name()).isAuthenticated(true)
+								.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
+								.refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds)).build())
 						.setMessage("LogIn Successful...!"));
 			}).get();
 		}
 	}
-	
-	private void grantAccess(HttpServletResponse response,User user) {
-		//generating access and refresh token
+
+	private void grantAccess(HttpServletResponse response, User user) {
+		// generating access and refresh token
 		String generateAccessToken = jwtService.generateAccessToken(user.getUsername());
 		String generateRefreshToken = jwtService.generateRefreshToken(user.getUsername());
 		
-		//Adding access and refresh tokens cookies ton the response
-		response.addCookie(cookieManager.configure(new Cookie("at",generateAccessToken), accessExpiryInseconds));
-		response.addCookie(cookieManager.configure(new Cookie("rt",generateRefreshToken), refreshExpiryInseconds));
-		
-		//saving the access and refresh cookie into the database
-		accessTokenRepository.save(AccessToken.builder()
-				.token(generateAccessToken)
-				.isBlocked(false)
+
+		// Adding access and refresh tokens cookies ton the response
+		response.addCookie(cookieManager.configure(new Cookie("at", generateAccessToken), accessExpiryInseconds));
+		response.addCookie(cookieManager.configure(new Cookie("rt", generateRefreshToken), refreshExpiryInseconds));
+
+		// saving the access and refresh cookie into the database
+		accessTokenRepository.save(AccessToken.builder().token(generateAccessToken).isBlocked(false)
 				.expiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
+				.user(user)
 				.build());
-		refreshTokenRepository.save(RefreshToken.builder()
-				.token(generateRefreshToken)
-				.isBlocked(false)
+		refreshTokenRepository.save(RefreshToken.builder().token(generateRefreshToken).isBlocked(false)
 				.expiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
+				.user(user)
 				.build());
 
-		
 	}
 
 	// -------------------------------------------------------------------------------------------------------
@@ -291,6 +289,60 @@ public class AuthServiceImpl implements AuthService {
 				userRepository.delete(user);
 			}
 		}
+	}
+
+	
+	//ACCEPTING HttpRequest and HttpRespoone(Older way to LOGOUT)
+	
+//	@Override
+//	public ResponseEntity<ResponseStructure<AuthResponse>> logout(HttpServletRequest request,
+//			HttpServletResponse response) {
+//		String at = null;
+//		String rt=null;
+//		Cookie[] cookies = request.getCookies();
+//		if (cookies != null) {
+//			for (Cookie cookie : cookies) {
+//				if(cookie.getName().equals("at")) at=cookie.getValue();
+//				if(cookie.getName().equals("rt")) rt=cookie.getValue();
+//			}
+//			accessTokenRepository.findByToken(at).ifPresent(accessToken->{
+//				accessToken.setBlocked(true);
+//				accessTokenRepository.save(accessToken);
+//			});
+//			refreshTokenRepository.findByToken(rt).ifPresent(refreshToken->{
+//				refreshToken.setBlocked(true);
+//				refreshTokenRepository.save(refreshToken);
+//			});
+//				response.addCookie(cookieManager.invalidate(new Cookie("at", "")));
+//				response.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
+//		}
+//		authResponseStructure.setStatus(HttpStatus.OK.value());
+//		authResponseStructure.setMessage("LOGOUT SUCCESSFULL...");
+//		return new ResponseEntity<ResponseStructure<AuthResponse>>(authResponseStructure, HttpStatus.OK);
+//	}
+
+	
+	
+	//ACCEPTING @CookieValue(New)
+	@Override
+	public ResponseEntity<SimpleResponseStructure<AuthResponse>> logout(String accessToken, String refreshToken,HttpServletResponse response) {
+		if(accessToken == null && refreshToken == null) {
+			throw new UserNotLoggedInException("LogIn first...!");
+		}
+		accessTokenRepository.findByToken(accessToken).ifPresent(token->{
+			token.setBlocked(true);
+			accessTokenRepository.save(token);
+		});
+		refreshTokenRepository.findByToken(refreshToken).ifPresent(token->{
+			token.setBlocked(true);
+			refreshTokenRepository.save(token);
+		});
+			response.addCookie(cookieManager.invalidate(new Cookie("at", "")));
+			response.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
+		
+			simpleResponseStructure.setMessage("Logout Successfully...!");
+			simpleResponseStructure.setStatus(HttpStatus.OK.value());
+		return new ResponseEntity<SimpleResponseStructure<AuthResponse>>(simpleResponseStructure,HttpStatus.OK);
 	}
 
 }
