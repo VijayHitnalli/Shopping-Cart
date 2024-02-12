@@ -50,4 +50,8 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	public ResponseEntity<Object> handleInvalidOTP(InvalidOTPException exception){
 		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "Your OTP is expired generate again");
 	}
+	@ExceptionHandler(UserNotLoggedInException.class)
+	public ResponseEntity<Object> handleUserNotLoggedIn(UserNotLoggedInException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Ypu are not logged in");
+	}
 }
