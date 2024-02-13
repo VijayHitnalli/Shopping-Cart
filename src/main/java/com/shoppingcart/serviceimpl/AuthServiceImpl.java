@@ -27,6 +27,7 @@ import com.shoppingcart.entity.RefreshToken;
 import com.shoppingcart.entity.Seller;
 import com.shoppingcart.entity.User;
 import com.shoppingcart.exception.InvalidOTPException;
+import com.shoppingcart.exception.UserAlreadyLoggedInException;
 import com.shoppingcart.exception.UserAlreadyExistByEmailException;
 
 import com.shoppingcart.exception.UserNotLoggedInException;
@@ -168,6 +169,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,
 			HttpServletResponse response) {
+		
 		String username = authRequest.getEmail().split("@")[0];
 		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username,
 				authRequest.getPassword());
@@ -175,7 +177,6 @@ public class AuthServiceImpl implements AuthService {
 		if (!authentication.isAuthenticated())
 			throw new UsernameNotFoundException("Failed to Authenticate the user");
 		else {
-			// generating the cookies and authResponse and returning to the client
 			return userRepository.findByUsername(username).map(user -> {
 				grantAccess(response, user);
 				return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value())
@@ -411,8 +412,7 @@ public class AuthServiceImpl implements AuthService {
 		});
 	}
 
-	
-	
+
 	@Override
 	public ResponseEntity<SimpleResponseStructure> refreshTokens(String accessToken, String refreshToken,
 	        HttpServletResponse response) {
@@ -448,6 +448,6 @@ public class AuthServiceImpl implements AuthService {
 	    });
 	}
 
-
 	
+
 }
