@@ -18,6 +18,7 @@ import com.shoppingcart.service.AuthService;
 import com.shoppingcart.utility.ResponseStructure;
 import com.shoppingcart.utility.SimpleResponseStructure;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 
