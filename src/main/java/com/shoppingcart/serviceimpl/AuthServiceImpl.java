@@ -322,6 +322,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public ResponseEntity<SimpleResponseStructure> logout(String accessToken, String refreshToken,
 			HttpServletResponse response) {
+		
 		accessTokenRepository.findByToken(accessToken).ifPresent(token -> {
 			token.setBlocked(true);
 			accessTokenRepository.save(token);
@@ -363,7 +364,7 @@ public class AuthServiceImpl implements AuthService {
 		simpleResponseStructure.setStatus(HttpStatus.OK.value());
 	    return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
 	}
-	
+
 	private void blockAccessTokens(List<AccessToken> accessTokens) {
 		accessTokens.forEach(at -> {
 			at.setBlocked(true);
@@ -410,36 +411,28 @@ public class AuthServiceImpl implements AuthService {
 		});
 	}
 
+	
+	
 	@Override
 	public ResponseEntity<SimpleResponseStructure> refreshTokens(String accessToken, String refreshToken,
 	        HttpServletResponse response) {
 	    
 	    Optional<AccessToken> optionalAccessToken = accessTokenRepository.findByToken(accessToken);
-	    if (optionalAccessToken.isEmpty()) {
-	        throw new UserNotLoggedInException("Invalid access token. Please log in again.");
+	    if (optionalAccessToken.isPresent()) {
+	    	 blockAccessTokens(accessToken);
 	    }
-	    blockAccessTokens(accessToken);
-
 	    Optional<RefreshToken> optionalRefreshToken = refreshTokenRepository.findByToken(refreshToken);
 	    if (optionalRefreshToken.isEmpty() || optionalRefreshToken.get().isBlocked()) {
 	        throw new UserNotLoggedInException("Invalid refresh token. Please log in again.");
 	    }
-	    AuthResponse authResponse = generateNewTokens(optionalRefreshToken.get().getUser());
 	    blockRefreshTokens(refreshToken);
-
+	    grantAccess(response, optionalRefreshToken.get().getUser());
+	    
 	    simpleResponseStructure.setStatus(HttpStatus.OK.value());
 	    simpleResponseStructure.setMessage("Tokens refreshed successfully.");
 	    return ResponseEntity.ok(simpleResponseStructure);
 	}
 	
-	private AuthResponse generateNewTokens(User user) {
-	    String newAccessToken = jwtService.generateAccessToken(user.getUsername());
-	    String newRefreshToken = jwtService.generateRefreshToken(user.getUsername());
-	    return new AuthResponse(user.getUserId(), user.getUsername(), user.getUserRole().name(), true,
-                LocalDateTime.now().plusSeconds(accessExpiryInseconds),
-                LocalDateTime.now().plusSeconds(refreshExpiryInseconds));
-	}
-
 	private void blockAccessTokens(String accessTokens) {
 		Optional<AccessToken> token = accessTokenRepository.findByToken(accessTokens);
 		 token.ifPresent(at -> {
@@ -447,7 +440,6 @@ public class AuthServiceImpl implements AuthService {
 		        accessTokenRepository.save(at);
 		    });
 	}
-
 	private void blockRefreshTokens(String refreshTokens) {
 		Optional<RefreshToken> token = refreshTokenRepository.findByToken(refreshTokens);
 		token.ifPresent(rt -> {
@@ -456,6 +448,6 @@ public class AuthServiceImpl implements AuthService {
 	    });
 	}
 
-	
+
 	
 }

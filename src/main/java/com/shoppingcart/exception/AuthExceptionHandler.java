@@ -52,6 +52,6 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	}
 	@ExceptionHandler(UserNotLoggedInException.class)
 	public ResponseEntity<Object> handleUserNotLoggedIn(UserNotLoggedInException exception){
-		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Ypu are not logged in");
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "You are not logged in");
 	}
 }

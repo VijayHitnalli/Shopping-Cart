@@ -49,7 +49,6 @@ public class JwtService {
 	    return jwtParser.parseClaimsJws(token).getBody();
 	}
 
-	
 	public String extrctUsername(String token) {
 		return jwtParser(token).getSubject();
 	}
