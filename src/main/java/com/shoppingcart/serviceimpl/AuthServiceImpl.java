@@ -19,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.CookieValue;
 
 import com.shoppingcart.cache.CacheStore;
 import com.shoppingcart.entity.AccessToken;
@@ -138,12 +139,13 @@ public class AuthServiceImpl implements AuthService {
 
 		return new ResponseEntity<ResponseStructure<UserResponse>>(
 				responseStructure.setStatus(HttpStatus.ACCEPTED.value())
-						.setMessage("Please verify through OTP sent to your email ").setData(mapToUserResponse(user)),
+				.setMessage("Please verify through OTP sent to your email ").setData(mapToUserResponse(user)),
 				HttpStatus.ACCEPTED);
 	}
 
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(OtpModel otpModel) {
+		System.out.println(" entered d");
 		User user = userCacheStore.get(otpModel.getEmail());
 		String otp = otpCacheStore.get(otpModel.getEmail());
 		if (otp == null)
@@ -168,26 +170,39 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,
-			HttpServletResponse response) {
-		
-		String username = authRequest.getEmail().split("@")[0];
-		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username,
-				authRequest.getPassword());
-		Authentication authentication = authenticationManager.authenticate(token);
-		if (!authentication.isAuthenticated())
-			throw new UsernameNotFoundException("Failed to Authenticate the user");
-		else {
-			return userRepository.findByUsername(username).map(user -> {
-				grantAccess(response, user);
-				return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value())
-						.setData(AuthResponse.builder().userId(user.getUserId()).username(user.getUsername())
-								.role(user.getUserRole().name()).isAuthenticated(true)
-								.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
-								.refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds)).build())
-						.setMessage("LogIn Successful...!"));
-			}).get();
-		}
+			HttpServletResponse response, String accessToken, String refreshToken) {
+
+		System.out.println("Entered login method");
+
+		if (accessToken == null && refreshToken == null) 
+		{
+			String username = authRequest.getEmail().split("@")[0];
+			System.out.println("last");
+			UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username,
+					authRequest.getPassword());
+			Authentication authentication = authenticationManager.authenticate(token);
+			if (!authentication.isAuthenticated()) {
+				throw new UsernameNotFoundException("Failed to authenticate the user");
+			} else {
+				return userRepository.findByUsername(username).map(user -> {
+					grantAccess(response, user);
+					return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value())
+							.setData(AuthResponse.builder().userId(user.getUserId()).username(user.getUsername())
+									.role(user.getUserRole().name()).isAuthenticated(true)
+									.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
+									.refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds)).build())
+							.setMessage("LogIn Successful...!"));
+
+				}).get();
+			}
+		} 
+		else 
+			throw new UserAlreadyLoggedInException("User Alreaady Login...????");
+			
+
+			
 	}
+
 
 	private void grantAccess(HttpServletResponse response, User user) {
 		// generating access and refresh token
@@ -292,38 +307,38 @@ public class AuthServiceImpl implements AuthService {
 
 	// ACCEPTING HttpRequest and HttpRespoone(Older way to LOGOUT)
 
-//	@Override
-//	public ResponseEntity<ResponseStructure<AuthResponse>> logout(HttpServletRequest request,
-//			HttpServletResponse response) {
-//		String at = null;
-//		String rt=null;
-//		Cookie[] cookies = request.getCookies();
-//		if (cookies != null) {
-//			for (Cookie cookie : cookies) {
-//				if(cookie.getName().equals("at")) at=cookie.getValue();
-//				if(cookie.getName().equals("rt")) rt=cookie.getValue();
-//			}
-//			accessTokenRepository.findByToken(at).ifPresent(accessToken->{
-//				accessToken.setBlocked(true);
-//				accessTokenRepository.save(accessToken);
-//			});
-//			refreshTokenRepository.findByToken(rt).ifPresent(refreshToken->{
-//				refreshToken.setBlocked(true);
-//				refreshTokenRepository.save(refreshToken);
-//			});
-//				response.addCookie(cookieManager.invalidate(new Cookie("at", "")));
-//				response.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
-//		}
-//		authResponseStructure.setStatus(HttpStatus.OK.value());
-//		authResponseStructure.setMessage("LOGOUT SUCCESSFULL...");
-//		return new ResponseEntity<ResponseStructure<AuthResponse>>(authResponseStructure, HttpStatus.OK);
-//	}
+	//	@Override
+	//	public ResponseEntity<ResponseStructure<AuthResponse>> logout(HttpServletRequest request,
+	//			HttpServletResponse response) {
+	//		String at = null;
+	//		String rt=null;
+	//		Cookie[] cookies = request.getCookies();
+	//		if (cookies != null) {
+	//			for (Cookie cookie : cookies) {
+	//				if(cookie.getName().equals("at")) at=cookie.getValue();
+	//				if(cookie.getName().equals("rt")) rt=cookie.getValue();
+	//			}
+	//			accessTokenRepository.findByToken(at).ifPresent(accessToken->{
+	//				accessToken.setBlocked(true);
+	//				accessTokenRepository.save(accessToken);
+	//			});
+	//			refreshTokenRepository.findByToken(rt).ifPresent(refreshToken->{
+	//				refreshToken.setBlocked(true);
+	//				refreshTokenRepository.save(refreshToken);
+	//			});
+	//				response.addCookie(cookieManager.invalidate(new Cookie("at", "")));
+	//				response.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
+	//		}
+	//		authResponseStructure.setStatus(HttpStatus.OK.value());
+	//		authResponseStructure.setMessage("LOGOUT SUCCESSFULL...");
+	//		return new ResponseEntity<ResponseStructure<AuthResponse>>(authResponseStructure, HttpStatus.OK);
+	//	}
 
 	// ACCEPTING @CookieValue(New)
 	@Override
 	public ResponseEntity<SimpleResponseStructure> logout(String accessToken, String refreshToken,
 			HttpServletResponse response) {
-		
+
 		accessTokenRepository.findByToken(accessToken).ifPresent(token -> {
 			token.setBlocked(true);
 			accessTokenRepository.save(token);
@@ -350,20 +365,20 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	public ResponseEntity<SimpleResponseStructure> revokeOtherDevices(String accessToken, String refreshToken, HttpServletResponse response) {
-	    String username = SecurityContextHolder.getContext().getAuthentication().getName();
-	    if (username != null) {
-	        userRepository.findByUsername(username).ifPresent(user -> {
-	            blockAccessTokens(accessTokenRepository.findAllByUserAndIsBlockedAndTokenNot(user, false, accessToken));
-	            blockRefreshTokens(refreshTokenRepository.findAllByUserAndIsBlockedAndTokenNot(user, false, refreshToken));
-	        });
-	    } else {
-	    	simpleResponseStructure.setMessage("Failed to authorize");
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		if (username != null) {
+			userRepository.findByUsername(username).ifPresent(user -> {
+				blockAccessTokens(accessTokenRepository.findAllByUserAndIsBlockedAndTokenNot(user, false, accessToken));
+				blockRefreshTokens(refreshTokenRepository.findAllByUserAndIsBlockedAndTokenNot(user, false, refreshToken));
+			});
+		} else {
+			simpleResponseStructure.setMessage("Failed to authorize");
 			simpleResponseStructure.setStatus(HttpStatus.UNAUTHORIZED.value());
-	        return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
-	    }
-	    simpleResponseStructure.setMessage("Revoked Successfully from other devices...!");
+			return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
+		}
+		simpleResponseStructure.setMessage("Revoked Successfully from other devices...!");
 		simpleResponseStructure.setStatus(HttpStatus.OK.value());
-	    return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
+		return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
 	}
 
 	private void blockAccessTokens(List<AccessToken> accessTokens) {
@@ -392,13 +407,13 @@ public class AuthServiceImpl implements AuthService {
 		}else {
 			simpleResponseStructure.setMessage("Failed to authorize");
 			simpleResponseStructure.setStatus(HttpStatus.UNAUTHORIZED.value());
-	        return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure,HttpStatus.UNAUTHORIZED);
 		}
-		  simpleResponseStructure.setMessage("Revoked Successfully from all devices...!");
-			simpleResponseStructure.setStatus(HttpStatus.OK.value());
-		    return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
+		simpleResponseStructure.setMessage("Revoked Successfully from all devices...!");
+		simpleResponseStructure.setStatus(HttpStatus.OK.value());
+		return new ResponseEntity<SimpleResponseStructure>(simpleResponseStructure, HttpStatus.OK);
 	}
-	
+
 	private void blockAllAccessTokens(List<AccessToken> accessTokens) {
 		accessTokens.forEach(at->{
 			at.setBlocked(true);
@@ -412,42 +427,60 @@ public class AuthServiceImpl implements AuthService {
 		});
 	}
 
-
 	@Override
-	public ResponseEntity<SimpleResponseStructure> refreshTokens(String accessToken, String refreshToken,
-	        HttpServletResponse response) {
-	    
-	    Optional<AccessToken> optionalAccessToken = accessTokenRepository.findByToken(accessToken);
-	    if (optionalAccessToken.isPresent()) {
-	    	 blockAccessTokens(accessToken);
-	    }
-	    Optional<RefreshToken> optionalRefreshToken = refreshTokenRepository.findByToken(refreshToken);
-	    if (optionalRefreshToken.isEmpty() || optionalRefreshToken.get().isBlocked()) {
-	        throw new UserNotLoggedInException("Invalid refresh token. Please log in again.");
-	    }
-	    blockRefreshTokens(refreshToken);
-	    grantAccess(response, optionalRefreshToken.get().getUser());
-	    
-	    simpleResponseStructure.setStatus(HttpStatus.OK.value());
-	    simpleResponseStructure.setMessage("Tokens refreshed successfully.");
-	    return ResponseEntity.ok(simpleResponseStructure);
-	}
-	
-	private void blockAccessTokens(String accessTokens) {
-		Optional<AccessToken> token = accessTokenRepository.findByToken(accessTokens);
-		 token.ifPresent(at -> {
-		        at.setBlocked(true);
-		        accessTokenRepository.save(at);
-		    });
-	}
-	private void blockRefreshTokens(String refreshTokens) {
-		Optional<RefreshToken> token = refreshTokenRepository.findByToken(refreshTokens);
-		token.ifPresent(rt -> {
-	        rt.setBlocked(true);
-	        refreshTokenRepository.save(rt);
-	    });
-	}
+	public ResponseEntity<ResponseStructure<AuthResponse>> refreshLoginAndTokenRotation(String at, String rt,
+			HttpServletResponse httpServletResponse) {
+		
+		System.out.println("Hiiiiii");
+			if(at!=null) {
+				AccessToken accessToken = accessTokenRepository.findByToken(at).get();
+				accessToken.setBlocked(true);
+				accessTokenRepository.save(accessToken);
+			}
+			// validate if the token is not expired, if not expired continue..,
+			// validate if the token is blocked, if not blocked continue..,
+			
+			// existsByTokenAndISBlockedAndExpirationAfter(refreshToken, false, LocalDateTime.now())
+			
+			if(rt==null) throw new UserAlreadyLoggedInException("User Already Logged Out, Plese Login Again");
+			List<RefreshToken> list= refreshTokenRepository.findByTokenAndIsBlockedAndExpirationAfter(rt,false,LocalDateTime.now());
+			if(!list.isEmpty()) {
+				for (RefreshToken refreshToken : list) {
+					System.out.println(refreshToken.getTokenId());
+				}
+			}
+				
+			boolean result= refreshTokenRepository.existsByTokenAndIsBlockedAndExpirationAfter(rt,false,LocalDateTime.now());
+			
+			String userName = jwtService.extrctUsername(rt);
+			
+            if(result)
+            {
+            	System.out.println("-----------*-----------");
+            	RefreshToken refreshToken = refreshTokenRepository.findByToken(rt).get();
+    			refreshToken.setBlocked(true);
+    			refreshTokenRepository.save(refreshToken);
 
-	
+				User user = userRepository.findByUsername(userName).get();
+				grantAccess(httpServletResponse,user);
+
+				SimpleResponseStructure structure=new SimpleResponseStructure();
+				structure.setStatus(HttpStatus.OK.value());
+				structure.setMessage("Refresh Token generated..!!!");
+
+				return ResponseEntity.ok(authResponseStructure.setStatus(HttpStatus.OK.value())
+						.setData(AuthResponse.builder()
+								.userId(user.getUserId())
+								.username(userName)
+								.role(user.getUserRole().name())
+								.isAuthenticated(true)
+								.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInseconds))
+								.refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInseconds))
+								.build())
+						.setMessage("Login Refereshed...!!!!!!!"));
+            }
+            else
+            	throw new UserAlreadyLoggedInException("UserAlready Logged out, Login Again");
+	}
 
 }

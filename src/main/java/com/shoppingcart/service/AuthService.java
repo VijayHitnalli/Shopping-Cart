@@ -19,8 +19,8 @@ public interface AuthService {
 
 	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(OtpModel otpModel);
 	
-	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest, HttpServletResponse response
-			);
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest, HttpServletResponse response,
+			String refreshToken,String accessToken);
 	
 	public ResponseEntity<SimpleResponseStructure> logout(String accessToken,
 			String refreshToken,HttpServletResponse response);
@@ -30,9 +30,7 @@ public interface AuthService {
 	public ResponseEntity<SimpleResponseStructure> revokeAllDevices(String accessToken, String refreshToken,
 			HttpServletResponse response);
 
-	public ResponseEntity<SimpleResponseStructure> refreshTokens(String accessToken, String refreshToken,
+	public ResponseEntity<ResponseStructure<AuthResponse>> refreshLoginAndTokenRotation(String accessToken, String refreshToken,
 			HttpServletResponse response);
-
-	
 
 }
