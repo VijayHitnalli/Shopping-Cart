@@ -3,7 +3,6 @@ package com.shoppingcart.serviceimpl;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +18,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.CookieValue;
 
 import com.shoppingcart.cache.CacheStore;
 import com.shoppingcart.entity.AccessToken;
@@ -28,10 +26,8 @@ import com.shoppingcart.entity.RefreshToken;
 import com.shoppingcart.entity.Seller;
 import com.shoppingcart.entity.User;
 import com.shoppingcart.exception.InvalidOTPException;
-import com.shoppingcart.exception.UserAlreadyLoggedInException;
 import com.shoppingcart.exception.UserAlreadyExistByEmailException;
-
-import com.shoppingcart.exception.UserNotLoggedInException;
+import com.shoppingcart.exception.UserAlreadyLoggedInException;
 import com.shoppingcart.repository.AccessTokenRepository;
 import com.shoppingcart.repository.CustomerRepository;
 import com.shoppingcart.repository.RefreshTokenRepository;
@@ -52,7 +48,6 @@ import com.shoppingcart.utility.SimpleResponseStructure;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 

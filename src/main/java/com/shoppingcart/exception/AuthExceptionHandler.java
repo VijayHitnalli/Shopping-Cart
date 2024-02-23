@@ -58,4 +58,18 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	public ResponseEntity<Object> handleUserAlreadyLoggedIn(UserAlreadyLoggedInException exception){
 		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "User already logged in");
 	}
+	
+	
+	@ExceptionHandler(InvalidAddressTypeException.class)
+	public ResponseEntity<Object> handleInvalidAddressType(InvalidAddressTypeException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given type of Address is not valid");
+	}
+	@ExceptionHandler(StoreNotFoundException.class)
+	public ResponseEntity<Object> handleStoreNotFound(StoreNotFoundException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given store Id not found in the database");
+	}
+	@ExceptionHandler(AddressNotFoundException.class)
+	public ResponseEntity<Object> handleAddressNotFound(AddressNotFoundException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given Address Id not found in the database");
+	}
 }
