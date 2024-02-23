@@ -1,6 +1,5 @@
 package com.shoppingcart.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.shoppingcart.enums.Priority;
 
 import jakarta.persistence.Entity;
@@ -30,7 +29,6 @@ public class Contact {
 	private long contactNumber;
 	private Priority priority;
 	
-	@JsonIgnore
 	@ManyToOne
 	private Address address;
 }
