@@ -55,7 +55,7 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "You are not logged in");
 	}
 	@ExceptionHandler(UserAlreadyLoggedInException.class)
-	public ResponseEntity<Object> handleUserAlreadyLoggedIn(UserNotLoggedInException exception){
+	public ResponseEntity<Object> handleUserAlreadyLoggedIn(UserAlreadyLoggedInException exception){
 		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "User already logged in");
 	}
 }

@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,24 +27,27 @@ import lombok.AllArgsConstructor;
 @RestController
 @RequestMapping("/api/v1")
 @EnableMethodSecurity
+@CrossOrigin(allowCredentials = "true",origins = "http://localhost:5173/")
 public class AuthController {
 
 	private AuthService authService;
 
+	
 	@PostMapping("/register")
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(@RequestBody UserRequest userRequest) {
 		return authService.registerUser(userRequest);
 	}
 
 	@PostMapping("/verify-otp")
-	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTO(@RequestBody OtpModel otpModel) {
+	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(@RequestBody OtpModel otpModel) {
 		return authService.verifyOTP(otpModel);
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,
-			HttpServletResponse response) {
-		return authService.login(authRequest, response);
+			HttpServletResponse response,@CookieValue(name = "at",required = false) String accessToken,
+			@CookieValue(name = "rt",required = false) String refreshToken) {
+		return authService.login(authRequest, response,accessToken,refreshToken);
 	}
 
 	@PostMapping("/logout")
@@ -61,8 +65,8 @@ public class AuthController {
 		return authService.revokeAllDevices(accessToken, refreshToken, response);
 	}
 	@PostMapping("/refresh-token")
-	public ResponseEntity<SimpleResponseStructure> refreshToken(@CookieValue(name = "at") String accessToken,@CookieValue(name = "rt") String refreshToken, HttpServletResponse response){
-		return authService.refreshTokens(accessToken, refreshToken, response);
+	public ResponseEntity<ResponseStructure<AuthResponse>> refreshLoginAndTokenRotation(@CookieValue(name = "at",required = false) String accessToken,@CookieValue(name = "rt",required = false) String refreshToken, HttpServletResponse response){
+		return authService.refreshLoginAndTokenRotation(accessToken, refreshToken, response);
 	}
 
 }
