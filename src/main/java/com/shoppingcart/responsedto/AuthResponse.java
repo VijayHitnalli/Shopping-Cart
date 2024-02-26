@@ -1,5 +1,7 @@
 package com.shoppingcart.responsedto;
 
+import java.time.LocalDateTime;
+
 import com.shoppingcart.enums.UserRole;
 
 import lombok.AllArgsConstructor;
@@ -8,18 +10,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
 @Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UserResponse {
-private int userId;
-private String username;
-private String email;
-private UserRole userRole;
-private boolean isEmailValidated;
-private boolean isDeleted;
 
-
+public class AuthResponse {
+	private int userId;
+	private String username;
+	private String role;
+	private boolean isAuthenticated;
+	private LocalDateTime accessExpiration;
+	private LocalDateTime refreshExpiration;
 }

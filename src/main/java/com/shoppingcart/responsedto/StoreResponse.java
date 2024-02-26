@@ -1,6 +1,6 @@
 package com.shoppingcart.responsedto;
 
-import com.shoppingcart.enums.UserRole;
+import com.shoppingcart.requestdto.AuthRequest;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,13 +13,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UserResponse {
-private int userId;
-private String username;
-private String email;
-private UserRole userRole;
-private boolean isEmailValidated;
-private boolean isDeleted;
-
-
+public class StoreResponse {
+	private int storeId;
+	private String storeName;
+	private String about;
+	
 }

@@ -18,9 +18,8 @@ public class CustomUserDetailService implements UserDetailsService{
 	
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		return userRepository.findByUserName(username).map(user-> new CustomUserDetails(user))
+		return userRepository.findByUsername(username).map(user-> new CustomUserDetails(user))
 				.orElseThrow(()->new UserNotFoundException("Failde To Verify the User"));
-		
 	}
 
 }

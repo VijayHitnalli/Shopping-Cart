@@ -40,6 +40,40 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	
 	@ExceptionHandler(UserNotFoundException.class)
 	public ResponseEntity<Object> handleUserNotFoundById(UserNotFoundException exception){
-		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "User Not found with given Id");
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Username or password incorrect");
+	}
+	@ExceptionHandler(UserAlreadyExistByEmailException.class)
+	public ResponseEntity<Object> handleUserAlreadyExistByEmail(UserAlreadyExistByEmailException exception){
+		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "User with given Email Id is Alreday Exist");
+	}
+	@ExceptionHandler(InvalidOTPException.class)
+	public ResponseEntity<Object> handleInvalidOTP(InvalidOTPException exception){
+		return structure(HttpStatus.NOT_ACCEPTABLE, exception.getMessage(), "Your OTP is expired generate again");
+	}
+	@ExceptionHandler(UserNotLoggedInException.class)
+	public ResponseEntity<Object> handleUserNotLoggedIn(UserNotLoggedInException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "You are not logged in");
+	}
+	@ExceptionHandler(UserAlreadyLoggedInException.class)
+	public ResponseEntity<Object> handleUserAlreadyLoggedIn(UserAlreadyLoggedInException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "User already logged in");
+	}
+	
+	
+	@ExceptionHandler(InvalidAddressTypeException.class)
+	public ResponseEntity<Object> handleInvalidAddressType(InvalidAddressTypeException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given type of Address is not valid");
+	}
+	@ExceptionHandler(StoreNotFoundException.class)
+	public ResponseEntity<Object> handleStoreNotFound(StoreNotFoundException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given store Id not found in the database");
+	}
+	@ExceptionHandler(AddressNotFoundException.class)
+	public ResponseEntity<Object> handleAddressNotFound(AddressNotFoundException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given Address Id not found in the database");
+	}
+	@ExceptionHandler(InvalidPriorityException.class)
+	public ResponseEntity<Object> handleInvalidPriority(InvalidPriorityException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Invalid Priority");
 	}
 }

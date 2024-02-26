@@ -1,19 +1,15 @@
 package com.shoppingcart.entity;
 
-import com.shoppingcart.enums.UserRole;
-import com.shoppingcart.responsedto.UserResponse.UserResponseBuilder;
+import com.shoppingcart.enums.Priority;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Inheritance;
-import jakarta.persistence.InheritanceType;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,24 +17,21 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users")
-@Inheritance(strategy = InheritanceType.JOINED)
-@Setter
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class User {
+@Table(name = "contacts")
+public class Contact {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private int userId;
-	private String username;
-	private String email;
-	private String password;
+	private int contactId;
+	private String name;
+	private long contactNumber;
 	@Enumerated(EnumType.STRING)
-	private UserRole userRole;
-	private boolean isEmailValidated;
-	private boolean isDeleted;
+	private Priority priority;
 	
-
+	@ManyToOne
+	private Address address;
 }
