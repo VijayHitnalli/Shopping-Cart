@@ -72,4 +72,8 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	public ResponseEntity<Object> handleAddressNotFound(AddressNotFoundException exception){
 		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Given Address Id not found in the database");
 	}
+	@ExceptionHandler(InvalidPriorityException.class)
+	public ResponseEntity<Object> handleInvalidPriority(InvalidPriorityException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Invalid Priority");
+	}
 }
