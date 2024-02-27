@@ -76,4 +76,8 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler{
 	public ResponseEntity<Object> handleInvalidPriority(InvalidPriorityException exception){
 		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Invalid Priority");
 	}
+	@ExceptionHandler(ImageNotFoundException.class)
+	public ResponseEntity<Object> handleImageNotFound(ImageNotFoundException exception){
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "Image Not found");
+	}
 }

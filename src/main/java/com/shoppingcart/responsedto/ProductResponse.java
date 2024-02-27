@@ -1,32 +1,21 @@
-package com.shoppingcart.entity;
-
-import org.springframework.data.mongodb.core.mapping.Encrypted;
+package com.shoppingcart.responsedto;
 
 import com.shoppingcart.enums.AvailabilityStatus;
 
-import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "products")
-@Getter
 @Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Product {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ProductResponse {
 	private int productId;
 	private String productName;
 	private String productDescription;
